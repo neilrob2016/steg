@@ -1,0 +1,18 @@
+Steg
+----
+This is a basic steganography program that hides data inside what looks at
+face value like uuencoded or base64 encoded data. These can be run through the
+respective decoders without errors (hopefully) but the output will be junk. The 
+steganography uses 1,2 or 4 bits in every output byte to hide the encoded data 
+which can optionally be xor'd with a key using the -k option.
+
+This probably wouldn't fool MI5/6/CIA etc for more than 5 mins unless you
+use a very long key. Though even then I wouldn't lay money on it. However it
+will hopefully prevent amateur hour hackers snooping on your data.
+
+This software has been compiled and tested on Linux and MacOS. Type "make"
+to compile.
+
+Any issues/thoughts email: neilrob2016@gmail.com
+
+Neil Robertson, April 2022
