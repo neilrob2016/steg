@@ -1,5 +1,6 @@
 #!/bin/bash
-# Make sure encode and decode work for both uuencode and base64
+# Make sure encode and decode work for both uuencode and base64. Test some
+# common combinations. Can't test everything.
 
 if [ ! -x steg ]; then
 	echo "ERROR: Type 'make' to compile the program first."
@@ -8,6 +9,8 @@ fi
 
 key=alongtestkey123hopefullythiswillwork
 badkey=alongtestkey124hopefullythiswillwork
+seed=1234
+badseed=1235
 
 doEqDiff()
 {
@@ -105,8 +108,31 @@ else
 	doNeDiff
 fi
 
-# Test fake base64
+# Test uuencode with LFSR and key. 
 echo -n "TEST 6: "
+steg -i test.txt -o test.uu -s $seed -k $key -e
+if [ $? -ne 0 ]; then
+	echo "FAIL"
+else
+	steg -i test.uu -o out -s $seed -k $key
+	if [ $? -ne 0 ]; then
+		echo "FAIL"
+	else
+		doEqDiff
+	fi
+fi
+
+# Negative test. Test uuencode with wrong seed. Must fail.
+echo -n "TEST 7: "
+steg -i test.uu -o out -k $key -s $badseed
+if [ $? -ne 0 ]; then
+	echo "FAIL"
+else
+	doNeDiff
+fi
+
+# Test fake base64
+echo -n "TEST 8: "
 steg -i test.txt -o test.64 -e -6
 if [ $? -ne 0 ]; then
 	echo "FAIL"
@@ -120,7 +146,7 @@ else
 fi
 
 # Test fake base64 with line length of 1
-echo -n "TEST 7: "
+echo -n "TEST 9: "
 steg -i test.txt -o test.64 -e -6 -l 1
 if [ $? -ne 0 ]; then
 	echo "FAIL"
@@ -135,7 +161,7 @@ fi
 
 
 # Test fake base64 with alternate bit count 1
-echo -n "TEST 8: "
+echo -n "TEST 9: "
 steg -i test.txt -o test.64 -e -6 -b 1
 if [ $? -ne 0 ]; then
 	echo "FAIL"
@@ -149,7 +175,7 @@ else
 fi
 
 # Test fake base64 with alternate bit count 4
-echo -n "TEST 9: "
+echo -n "TEST 10: "
 steg -i test.txt -o test.64 -e -6 -b 4
 if [ $? -ne 0 ]; then
 	echo "FAIL"
@@ -177,12 +203,36 @@ else
 fi
 
 # Negative test. Test base64 with wrong key, must fail.
-echo -n "TEST 11: "
+echo -n "TEST 12: "
 steg -i test.64 -o out -k $badkey -6
 if [ $? -ne 0 ]; then
 	echo "FAIL"
 else
 	doNeDiff
 fi
+
+# Test base64 with key and seed.
+echo -n "TEST 13: "
+steg -i test.txt -o test.uu -s $seed -k $key -e -6
+if [ $? -ne 0 ]; then
+	echo "FAIL"
+else
+	steg -i test.uu -o out -s $seed -k $key -6
+	if [ $? -ne 0 ]; then
+		echo "FAIL"
+	else
+		doEqDiff
+	fi
+fi
+
+# Negative test. Test base64 with wrong seed. Must fail.
+echo -n "TEST 14: "
+steg -i test.uu -o out -k $key -s $badseed -6
+if [ $? -ne 0 ]; then
+	echo "FAIL"
+else
+	doNeDiff
+fi
+
 
 rm -f test.txt test.uu test.64 out

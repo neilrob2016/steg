@@ -15,7 +15,8 @@ const char *b64_charset =
 char getB64char(u_char mask, u_char data);
 
 /*** This encoding is much simpler than uuencode because no header, footer
-     line length or info byte is required ***/
+     line length or info byte is required and any non valid characters can
+     simply be skipped ***/
 void encodeB64()
 {
 	long bytes_read;
@@ -42,6 +43,8 @@ void encodeB64()
 			/* Get bits we need and shift byte down for next time */
 			data = byte & encode_mask;
 			if (key) data ^= getKeyBits();
+			if (lfsr_seed) data ^= getRandomBits();
+
 			if (flags.output_data)
 				writeByte(getB64char(charset_mask,data));
 
@@ -98,6 +101,7 @@ void decodeB64()
 
 		byte &= encode_mask;
 		if (key) byte ^= getKeyBits();
+		if (lfsr_seed) byte ^= getRandomBits();
 		out_byte |= (byte << (bits_per_byte * part));
 
 		if (++part == byte_parts)

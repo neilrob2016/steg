@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
@@ -18,7 +19,7 @@
 #define EXTERN extern
 #endif
 
-#define VERSION "20220402"
+#define VERSION "20220409"
 
 struct st_flags
 {
@@ -55,6 +56,10 @@ EXTERN int key_len;
 EXTERN int key_pos;
 EXTERN int key_shift;
 
+EXTERN uint64_t lfsr_seed;
+EXTERN uint64_t lfsr_val;
+EXTERN int lfsr_shift;
+
 /* uuencode.c */
 void    encodeUU();
 void    decodeUU();
@@ -64,5 +69,7 @@ void encodeB64();
 void decodeB64();
 
 /* common.c */
+void setRandomValue();
+u_char getRandomBits();
 u_char getKeyBits();
 void   writeByte(u_char byte);

@@ -88,6 +88,8 @@ void encodeUU()
 			/* Get bits we need and shift byte down for next time */
 			data = byte & encode_mask;
 			if (key) data ^= getKeyBits();
+			if (lfsr_seed) data ^= getRandomBits();
+
 			if (flags.output_data)
 				writeByte(getUUChar(charset_mask,data));
 
@@ -258,7 +260,9 @@ void decodeUU()
 			}
 			byte &= encode_mask;
 			if (key) byte ^= getKeyBits();
+			if (lfsr_seed) byte ^= getRandomBits();
 			out_byte |= (byte << (bits_per_byte * part));
+
 			if (++part == byte_parts)
 			{
 				if (flags.output_data) writeByte(out_byte);
@@ -273,13 +277,13 @@ void decodeUU()
 	switch(state)
 	{
 	case STATE_FIND_HEADER:
-		fprintf(stderr,"ERROR: Couldn't find UU header.\n");
+		fprintf(stderr,"ERROR: Missing UU header.\n");
 		exit(1);
 	case STATE_FIND_DATA:
-		fprintf(stderr,"ERROR: Couldn't find data.\n");
+		fprintf(stderr,"ERROR: Missing data following UU header.\n");
 		exit(1);
 	case STATE_FIND_INFO_BYTE:
-		fprintf(stderr,"ERROR: Couldn't find encode character.\n");
+		fprintf(stderr,"ERROR: Missing info byte.\n");
 		exit(1);
 	case STATE_DECODE:
 		if (part)

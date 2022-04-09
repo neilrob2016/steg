@@ -23,6 +23,7 @@ int main(int argc, char **argv)
 {
 	parseCmdLine(argc,argv);
 	init();
+
 	if (flags.encode)
 		encode();
 	else
@@ -46,6 +47,7 @@ void parseCmdLine(int argc, char **argv)
 	key = NULL;
 	bits_per_byte = BITS_PER_BYTE;
 	base64_line_len = B64_LINE_LEN;
+	lfsr_seed = 0;
 
 	bzero(&flags,sizeof(flags));
 	flags.output_data = 1;
@@ -107,6 +109,13 @@ void parseCmdLine(int argc, char **argv)
 			output_file = argv[i];
 			if (!output_file[0]) goto ERROR;
 			break;
+		case 's':
+			if ((lfsr_seed = (uint64_t)strtol(argv[i],NULL,10)) < 1)
+			{
+				fprintf(stderr,"ERROR: Invalid -s value. Must be > 0.\n");
+				exit(1);
+			}
+			break;
 		case 'u':
 			uu_hdr_file = argv[i];
 			if (!uu_hdr_file[0]) goto ERROR;
@@ -134,7 +143,12 @@ void parseCmdLine(int argc, char **argv)
 	       "      [-l <base64 line len>] : Length of each encoded line for Base64. Zero\n"
 	       "                               means one long line. Ignored with uuencode or\n"
 	       "                               if decoding. Default = %d.\n"
-	       "      [-k <encryption key>]  : Default = not set.\n"
+	       "      [-k <encryption key>]  : Bits cyclically XOR'd with data. Can be used in\n"
+	       "                               conjunction with -s. Most effective when close\n"
+	       "                               to or equal to length of the data when it acts\n"
+	       "                               as a one time pad. Default = not set.\n"
+	       "      [-s <LFSR seed>]       : Seeds LFSR pseudo random generated whose output\n"
+	       "                               is XOR'd with the data. Default = not set.\n"
 	       "      [-6]                   : Fake encode/decode = Base64. Default = uuencode.\n"
 	       "      [-e]                   : Encode data. Default = decode.\n"
 	       "      [-d]                   : Print debug info (to stderr).\n"
@@ -208,6 +222,13 @@ void init()
 		key_shift = 0;
 	}
 
+	if (lfsr_seed)
+	{
+		lfsr_val = lfsr_seed;
+		lfsr_shift = 0;
+		setRandomValue();
+	}
+
 	flags.uu_info_byte = 1;
 	byte_parts = 8 / bits_per_byte;
 	encode_mask = 0xFF >> (8 - bits_per_byte);
@@ -218,6 +239,8 @@ void init()
 		fprintf(stderr,"  * byte_parts = %d, encode_mask = 0x%02X, charset_mask = 0x%02X\n",
 			byte_parts,encode_mask,charset_mask);
 	}
+
+	
 }
 
 
