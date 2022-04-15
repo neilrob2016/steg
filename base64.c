@@ -20,21 +20,22 @@ char getB64char(u_char mask, u_char data);
 void encodeB64()
 {
 	long bytes_read;
-	u_char *ptr;
 	u_char byte;
 	u_char data;
 	int line_bytes;
+	int c;
 	int i;
 
 	line_bytes = 0;
 	/* Base64 doesn't seem to make a fuss about non 4 byte chunks so we 
 	   won't bother with pad bytes */
 	pad_bytes = 0;
+	bytes_read = 0;
 
 	/* Go through input file */
-	for(bytes_read=0,ptr=mm_start;ptr <= mm_end;)
+	while((c = readByte()) != EOF)
 	{
-		byte = *ptr++;
+		byte = (u_char)c;
 		++bytes_read;
 
 		/* Break up byte as per uuencode */
@@ -74,19 +75,19 @@ void encodeB64()
      through the entire file and decode every one that is valid ***/
 void decodeB64()
 {
-	u_char *ptr;
 	u_char byte;
 	u_char out_byte;
 	int part;
+	int c;
 
 	if (flags.debug) fprintf(stderr,"base64\n");
 
 	out_byte = 0;
 	part = 0;
 
-	for(ptr=mm_start;ptr <= mm_end;)
+	while((c = readByte()) != EOF)
 	{
-		byte = *ptr++;
+		byte = (u_char)c;
 
 		/* Ignore non compliant chars */
 		if (!IN_B64_CHARSET(byte))

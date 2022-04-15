@@ -1,5 +1,24 @@
 #include "globals.h"
 
+
+int readByte()
+{
+	u_char c;
+
+	switch(read(in_fd,&c,1))
+	{
+	case 0:
+		return EOF;
+	case -1:
+		perror("ERROR: read()");
+		exit(1);
+	}
+	return (int)c;
+}
+
+
+
+
 /*** Can't just use built in random() or rand() because different systems may
      use slightly different algorithms and hence produce difference sequences
      given the same seed. Not much use when decoding!

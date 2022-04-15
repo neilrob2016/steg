@@ -14,8 +14,7 @@
 const char *uu_charset =
         "`!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_";
 
-char    getUUChar(u_char mask, u_char data);
-u_char *getUUEnd(u_char *ptr);
+char getUUChar(u_char mask, u_char data);
 
 /*** uuencode is more complicated than base64 due to header, footer and line
      start length character ***/
@@ -25,19 +24,21 @@ void encodeUU()
 	long cnt;
 	u_char byte;
 	u_char data;
-	u_char *ptr;
 	int line_bytes;
 	int part;
+	int c;
 	int i;
 
 	line_bytes = 0;
+	bytes_read = 0;
 
 	/* Uuencode likes data in 4 byte chunks so we need to oblidge */
 	last_line_cnt = (fs.st_size * byte_parts) % UU_DECODED_LINE_LEN;
 	pad_bytes = 4 - (last_line_cnt % 4);
 	if (pad_bytes == 4) pad_bytes = 0;
 
-	if (flags.debug) fprintf(stderr,"  * pad_bytes = %d\n",pad_bytes);
+	if (flags.debug)
+		fprintf(stderr,"  * Pad length     : %d bytes\n",pad_bytes);
 
 	if (flags.output_data)
 	{
@@ -56,9 +57,9 @@ void encodeUU()
 			writeByte('M');
 	}
 
-	for(bytes_read=0,ptr=mm_start;ptr <= mm_end;)
+	while((c = readByte()) != EOF)
 	{
-		byte = *ptr++;
+		byte = (u_char)c;
 		++bytes_read;
 
 		if (flags.uu_info_byte)
@@ -178,14 +179,15 @@ void decodeUU()
 	};
 	char *header = "begin NNN ";
 	char sc;
-	u_char *data_end;
+	u_char byte;
+	u_char out_byte;
+	long output_len;
 	int state;
 	int bpos;
 	int part;
 	int line_pos;
-	u_char byte;
-	u_char out_byte;
-	u_char *ptr;
+	int cnt;
+	int c;
 
 	if (flags.debug) fprintf(stderr,"uuencode\n");
 
@@ -193,12 +195,12 @@ void decodeUU()
 	bpos = 0;
 	line_pos = 0;
 	out_byte = 0;
+	output_len = 0;
 	part = 0;
-	data_end = mm_end;
 
-	for(ptr=mm_start;ptr <= data_end;)
+	while((c = readByte()) != EOF)
 	{
-		byte = *ptr++;
+		byte = (u_char)c;
 
 		switch(state)
 		{
@@ -208,16 +210,7 @@ void decodeUU()
 			if (byte == sc || (sc == 'N' && isdigit(byte)))
 			{
 				if (++bpos == (int)strlen(header))
-				{
-					/* Find the end. Do this in situ 
-					   instead of another state */
-					if (!(data_end = getUUEnd(ptr)))
-					{
-						fprintf(stderr,"ERROR: Corrupt data - end marker missing.\n");
-						exit(1);
-					}
 					state = STATE_FIND_DATA;
-				}
 			}
 			else bpos = 0;
 			break;
@@ -233,8 +226,7 @@ void decodeUU()
 			{
 				pad_bytes = byte & 0x03;
 				if (flags.debug)
-					fprintf(stderr,"  * pad_bytes = %d\n",pad_bytes);
-				data_end -= pad_bytes;
+					fprintf(stderr,"  * Pad length     : %d bytes\n",pad_bytes);
 				encode_lines = 1;
 				state = STATE_DECODE;
 			}
@@ -247,9 +239,7 @@ void decodeUU()
 				flags.uu_line_start = 1;
 				continue;
 			case GRAVE:
-				/* Should never get here as it means getUUEnd()
-				   failed */
-				if (flags.uu_line_start) assert(0);
+				if (flags.uu_line_start) goto ENDLOOP;
 			}
 			if (flags.uu_line_start)
 			{
@@ -265,7 +255,11 @@ void decodeUU()
 
 			if (++part == byte_parts)
 			{
-				if (flags.output_data) writeByte(out_byte);
+				if (flags.output_data)
+				{
+					writeByte(out_byte);
+					++output_len;
+				}
 				out_byte = 0;
 				part = 0;
 			}
@@ -286,31 +280,27 @@ void decodeUU()
 		fprintf(stderr,"ERROR: Missing info byte.\n");
 		exit(1);
 	case STATE_DECODE:
-		if (part)
+		/* Work out how many bytes to truncate the file by if we wrote
+		   out the pad byte data */
+		if ((cnt = (pad_bytes * bits_per_byte) / 8))
 		{
-			fprintf(stderr,"ERROR: Incomplete data.\n");
-			exit(1);
+			if (flags.output_data && output_file)
+			{
+				/* truncate doesn't seem to work if file still
+				   open to write */
+				fclose(out_fp);
+				out_fp = NULL;
+			    	if (truncate(output_file,output_len - cnt) == -1)
+				{
+					perror("ERROR: truncate()");
+					exit(1);
+				}
+			}
 		}
+		if (flags.debug)
+			printf("  * File truncation: %d bytes\n",cnt);
 		break;
+	default:
+		assert(0);
 	}
-}
-
-
-
-
-/*** Find the end of the uuencode data ***/
-u_char *getUUEnd(u_char *ptr)
-{
-	char *footer = "\n`\nend";
-	int pos;
-
-	for(pos=0;ptr <= mm_end;++ptr)
-	{
-		if (*ptr == footer[pos])
-		{
-			if (++pos == 6) return ptr - 6;
-		}
-		else pos = 0;
-	}
-	return NULL;
 }

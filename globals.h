@@ -11,7 +11,6 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/mman.h>
 
 #ifdef MAINFILE
 #define EXTERN
@@ -19,14 +18,16 @@
 #define EXTERN extern
 #endif
 
-#define VERSION "20220409"
+#define VERSION "20220415"
+
+#define STDIN    0
 
 struct st_flags
 {
 	unsigned encode         : 1;
 	unsigned debug          : 1;
 	unsigned output_data    : 1;
-	unsigned base64         : 1;
+	unsigned uuencode       : 1;
 	unsigned uu_info_byte   : 1;
 	unsigned uu_started     : 1;
 	unsigned uu_find_data   : 1;
@@ -36,9 +37,8 @@ struct st_flags
 
 EXTERN struct st_flags flags;
 EXTERN struct stat fs;
+EXTERN int in_fd;
 EXTERN FILE *out_fp;
-EXTERN u_char *mm_start;
-EXTERN u_char *mm_end;
 EXTERN u_char encode_mask;
 EXTERN u_char charset_mask;
 EXTERN char *input_file;
@@ -61,15 +61,16 @@ EXTERN uint64_t lfsr_val;
 EXTERN int lfsr_shift;
 
 /* uuencode.c */
-void    encodeUU();
-void    decodeUU();
+void encodeUU();
+void decodeUU();
 
 /* base64.c */
 void encodeB64();
 void decodeB64();
 
 /* common.c */
-void setRandomValue();
+int    readByte();
+void   setRandomValue();
 u_char getRandomBits();
 u_char getKeyBits();
 void   writeByte(u_char byte);

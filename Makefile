@@ -24,4 +24,4 @@ build_date:
 	echo "#define BUILD_DATE \"`date -u +'%F %T %Z'`\"" > build_date.h
 
 clean:
-	rm -f $(BIN) *.o core* build_date.h 
+	rm -f $(BIN) *.o core* build_date.h test.uu test.64 out
